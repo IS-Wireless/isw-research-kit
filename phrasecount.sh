@@ -1,0 +1,133 @@
+#! /usr/bin/env bash
+
+. ${BASH_SOURCE%/*}/scripts/common.sh
+. ${BASH_SOURCE%/*}/scripts/file-types/doc.sh
+. ${BASH_SOURCE%/*}/scripts/file-types/pdf.sh
+. ${BASH_SOURCE%/*}/scripts/file-types/unknown.sh
+
+readonly PROGRAM_NAME="phrasecount.sh"
+readonly LOG=$(tmp)/${PROGRAM_NAME}.log
+
+function usage () {
+  cat <<- EOF
+Usage: ${PROGRAM_NAME} [-d] [-h] <-f FILE> <-p "grep-like phrase">
+  -d - enable debug output
+  -h - show this help
+  -f </path/to/file> - specification to parse
+  -p "grep-like phrase" - phrase to count number of occurrences of; use quotes
+                          if the phrase contains whitespaces
+EOF
+}
+
+INPUT=""
+PHRASE=""
+DEBUG=0
+function parse_args () {
+  while getopts ":df:hp:" OPT "${@}"
+  do
+    case $OPT in
+      d)
+        DEBUG=1
+        ;;
+      f)
+        INPUT="${OPTARG}"
+        ;;
+      h)
+        usage
+        exit 0
+        ;;
+      p)
+        PHRASE="${OPTARG}"
+        ;;
+      \?|:)
+        usage
+        exit 1
+        ;;
+    esac
+  done
+  debugger "INPUT" "${INPUT}"
+  debugger "PHRASE" "${PHRASE}"
+
+  if log is_empty ${INPUT}
+  then
+    usage
+    exit 1
+  fi
+  if log is_empty "${PHRASE}"
+  then
+    usage
+    exit 1
+  fi
+}
+
+function file_type () {
+  local readonly FILE=${1}
+  debugger "FILE" "${FILE}"
+  local readonly TYPES="is_pdf is_doc is_unknown"
+
+  for TYPE in ${TYPES}
+  do
+    if "${TYPE}" "${FILE}"
+    then
+      debugger "TYPE" "${TYPE}"
+      break
+    fi
+  done
+}
+
+function parser () {
+  local readonly TYPE=${1}
+  debugger "TYPE" "${TYPE}"
+
+  echo "${TYPE}_parser"
+}
+
+function install_missing_components () {
+  local readonly TYPE=${1}
+  debugger "TYPE" "${TYPE}"
+
+  log easy_install "\
+    $(${TYPE}_requirements) \
+  "
+  if test "x$?" = "x1"
+  then
+    log stack
+    return 1
+  fi
+}
+
+function parse () {
+  local readonly FILE=${1}
+  debugger "FILE" "${FILE}"
+  local readonly PHRASE=${2}
+  debugger "PHRASE" "${PHRASE}"
+
+  local readonly OCCURRENCES=$(grep -c "${PHRASE}" "${FILE}")
+  debugger "OCCURRENCES" "${OCCURRENCES}"
+
+  echo "${OCCURRENCES}"
+}
+
+function main () {
+  parse_args "${@}" || panic
+
+  local readonly FILE=${INPUT}
+  debugger "FILE" "${FILE}"
+  local readonly TYPE=$(file_type ${FILE})
+  debugger "TYPE" "${TYPE}"
+  local readonly PARSER=$(parser ${TYPE})
+  debugger "PARSER" "${PARSER}"
+  local readonly OUTPUT=$(mktemp -q)
+  debugger "OUTPUT" "${OUTPUT}"
+
+  log install_missing_components "${TYPE}" || panic
+
+  log ${PARSER} ${FILE} ${OUTPUT} || panic
+
+  parse ${OUTPUT} "${PHRASE}" || panic
+
+  log rm -rf ${OUTPUT} || panic
+}
+
+main "${@}" 2>&1 | tee ${LOG}
+
