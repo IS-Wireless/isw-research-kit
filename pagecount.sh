@@ -20,7 +20,7 @@ EOF
 INPUT=""
 DEBUG=0
 function parse_args () {
-  while getopts ":df:h" OPT
+  while getopts ":df:h" OPT ${@}
   do
     case $OPT in
       d)
@@ -104,7 +104,7 @@ function parse () {
 }
 
 function main () {
-  parse_args ${*} || panic
+  parse_args "${@}" || panic
 
   local readonly FILE=${INPUT}
   debugger "FILE" "${FILE}"
@@ -116,5 +116,5 @@ function main () {
   log parse ${TYPE} ${FILE} || panic
 }
 
-main ${*} 2>&1 | tee ${LOG}
+main "${@}" 2>&1 | tee ${LOG}
 

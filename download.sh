@@ -19,7 +19,7 @@ DEBUG=0
 SPEC=""
 OUTPUT="$(pwd)"
 function parse_args () {
-  while getopts ":dho:s:" OPT
+  while getopts ":dho:s:" OPT ${@}
   do
     case $OPT in
       d)
@@ -164,7 +164,7 @@ function download_specification () {
 }
 
 function main () {
-  parse_args ${*} || panic
+  parse_args "${@}" || panic
   log install_missing_components || panic
 
   local readonly WORKSPACE=$(mktemp -d -q)
@@ -173,5 +173,5 @@ function main () {
   log rm -rf ${WORKSPACE} || panic
 }
 
-main ${*} 2>&1 | tee ${LOG}
+main "${@}" 2>&1 | tee ${LOG}
 
