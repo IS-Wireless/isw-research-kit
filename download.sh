@@ -1,0 +1,177 @@
+#! /usr/bin/env bash
+
+. ${BASH_SOURCE%/*}/scripts/common.sh
+
+readonly PROGRAM_NAME="download.sh"
+readonly LOG=$(tmp)/${PROGRAM_NAME}.log
+
+function usage () {
+  cat <<- EOF
+Usage: ${PROGRAM_NAME} [-d] [-h] [-o /path/to/output/dir] <-s AB.CDE>
+  -d - enable debug output, default is disabled
+  -h - show this help
+  -o </path/to/output/directory>, default $(pwd)
+  -s AB.CDE - specification number to get (e.g. 38.300)
+EOF
+}
+
+DEBUG=0
+SPEC=""
+OUTPUT="$(pwd)"
+function parse_args () {
+  while getopts ":dho:s:" OPT
+  do
+    case $OPT in
+      d)
+        DEBUG=1
+        ;;
+      h)
+        log usage
+        exit 0
+        ;;
+      o)
+        OUTPUT="${OPTARG}"
+        ;;
+      s)
+        SPEC="${OPTARG}"
+        ;;
+      \?|:)
+        log usage
+        exit 1
+        ;;
+    esac
+  done
+
+  debugger "OUTPUT" "${OUTPUT}"
+  debugger "SPEC" "${SPEC}"
+  if log is_empty "$(regexp_3gpp_specification ${SPEC})"
+  then
+    echo "not a 3gpp specification"
+    log usage
+    exit 1
+  fi
+}
+
+function install_missing_components () {
+  log easy_install "\
+    unzip \
+    wget \
+  "
+  if test "x$?" = "x1"
+  then
+    log stack
+    return 1
+  fi
+}
+
+function get_latest_zip () {
+  local readonly HTML=${1}
+
+  # it should be sufficient to just sort the filenames and take last
+  local readonly LATEST=$(cat ${HTML} | sed 's/<br>/\r\n/g' | grep -a "zip" | sed 's/^.*>\(.*\)<.*$/\1/' | tail -1)
+  debugger "LATEST" "${LATEST}"
+  echo ${LATEST}
+}
+
+function download_specification () {
+  local readonly SPECIFICATION=${1}
+  local readonly WORKSPACE=${2}
+
+  debugger "SPECIFICATION" "${SPECIFICATION}"
+  debugger "WORKSPACE" "${WORKSPACE}"
+
+  if log is_empty $(regexp_3gpp_specification ${SPECIFICATION})
+  then
+    log stack
+    return 1
+  fi
+
+  local readonly SPEC_MAJOR=$(echo -n "${SPECIFICATION}" | sed 's/\([0-9][0-9]\)\.\([0-9][0-9][0-9]\)/\1/')
+  local readonly SPEC_MINOR=$(echo -n "${SPECIFICATION}" | sed 's/\([0-9][0-9]\)\.\([0-9][0-9][0-9]\)/\2/')
+  debugger "SPEC_MAJOR" "${SPEC_MAJOR}"
+  debugger "SPEC_MINOR" "${SPEC_MINOR}"
+
+  local readonly DIRECTORY="http://www.3gpp.org/ftp/specs/archive/${SPEC_MAJOR}_series/${SPEC_MAJOR}.${SPEC_MINOR}/"
+  debugger "DIRECTORY" "${DIRECTORY}"
+  local readonly DIRECTORY_HTTP_STATUS=$(wget -q -c -O /dev/null --server-response ${DIRECTORY} 2>&1 | awk '/HTTP\//{ print $2 }' | tail -1)
+  debugger "DIRECTORY_HTTP_STATUS" "${DIRECTORY_HTTP_STATUS}"
+
+  case ${DIRECTORY_HTTP_STATUS} in
+    200)
+      ;;
+    \?|:|*)
+      echo "invalid specification number"
+      log stack
+      return 1
+      ;;
+  esac
+
+  log wget -q -O ${WORKSPACE}/directory.html ${DIRECTORY}
+  if test "x$?" = "x1"
+  then
+    log stack
+    return 1
+  fi
+
+  local readonly ZIP=$(get_latest_zip ${WORKSPACE}/directory.html)
+  debugger "ZIP" "${ZIP}"
+  local readonly ZIP_HTTP_STATUS=$(wget -q -c -O /dev/null --server-response ${DIRECTORY}${ZIP} 2>&1 | awk '/HTTP\//{ print $2 }' | tail -1)
+  debugger "ZIP_HTTP_STATUS" "${ZIP_HTTP_STATUS}"
+
+  case ${ZIP_HTTP_STATUS} in
+    200)
+      ;;
+    \?|:|*)
+      echo "invalid specification number"
+      log stack
+      return 1
+      ;;
+  esac
+
+  log wget -q -O ${WORKSPACE}/spec.zip ${DIRECTORY}/${ZIP}
+  if test "x$?" = "x1"
+  then
+    log stack
+    return 1
+  fi
+
+  log mkdir -p ${WORKSPACE}/spec
+  if test "x$?" = "x1"
+  then
+    log stack
+    return 1
+  fi
+  log unzip -j -qq ${WORKSPACE}/spec.zip -d ${WORKSPACE}/spec/
+  if test "x$?" = "x1"
+  then
+    log stack
+    return 1
+  fi
+
+  # now get the largest doc file - the one most likely to be our spec
+  # if there are more than one files with the same largest size - get all of them
+  # steps:
+  # 1. find the size of the largest doc file
+  # 2. list all files with that size
+  # 3. from that list choose only those that have spec in name and no "rm"
+  local readonly LARGEST_SIZE=$(find ${WORKSPACE}/spec/ -name "*.doc" -printf '%s\n' | sort -nr | head -1)
+  debugger "LARGEST_SIZE" "${LARGEST_SIZE}"
+  local readonly BEST_MATCH=$(find ${WORKSPACE}/spec/ -name "*.doc" -printf '%s %p\n' | grep "${LARGEST_SIZE}" | awk '{ print $2}' | grep -v "rm" | grep "${SPEC_MAJOR}\.\?${SPEC_MINOR}" | head -1)
+  debugger "BEST_MATCH" "${BEST_MATCH}"
+
+  log mv ${BEST_MATCH} "${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.doc"
+  echo "saved requested specification to ${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.doc"
+}
+
+function main () {
+  parse_args ${*} || panic
+  log install_missing_components || panic
+
+  local readonly WORKSPACE=$(mktemp -d -q)
+  log download_specification ${SPEC} ${WORKSPACE} || panic
+
+  log rm -rf ${WORKSPACE} || panic
+}
+
+main ${*} 2>&1 | tee ${LOG}
+
