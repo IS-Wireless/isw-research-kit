@@ -1,8 +1,8 @@
 #! /usr/bin/env bash
 
-. ${BASH_SOURCE%/*}/scripts/common.sh
+. ${BASH_SOURCE%/*}/scripts/common
 
-readonly PROGRAM_NAME="download.sh"
+readonly PROGRAM_NAME="3gpp-download"
 readonly LOG=$(tmp)/${PROGRAM_NAME}.log
 
 function usage () {
@@ -12,6 +12,7 @@ Usage: ${PROGRAM_NAME} [-d] [-h] [-o /path/to/output/dir] <-s AB.CDE>
   -h - show this help
   -o </path/to/output/directory>, default $(pwd)
   -s AB.CDE - specification number to get (e.g. 38.300)
+  Downloads 3GPP specification with given number.
 EOF
 }
 

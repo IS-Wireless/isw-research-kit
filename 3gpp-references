@@ -1,11 +1,11 @@
 #! /usr/bin/env bash
 
-. ${BASH_SOURCE%/*}/scripts/common.sh
-. ${BASH_SOURCE%/*}/scripts/file-types/doc.sh
-. ${BASH_SOURCE%/*}/scripts/file-types/pdf.sh
-. ${BASH_SOURCE%/*}/scripts/file-types/unknown.sh
+. ${BASH_SOURCE%/*}/scripts/common
+. ${BASH_SOURCE%/*}/scripts/file-types/doc
+. ${BASH_SOURCE%/*}/scripts/file-types/pdf
+. ${BASH_SOURCE%/*}/scripts/file-types/unknown
 
-readonly PROGRAM_NAME="references.sh"
+readonly PROGRAM_NAME="3gpp-references"
 readonly LOG=$(tmp)/${PROGRAM_NAME}.log
 
 function usage () {
@@ -14,6 +14,7 @@ Usage: ${PROGRAM_NAME} [-d] [-h] <-f FILE>
   -d - enable debug output
   -h - show this help
   -f </path/to/file> - specification to parse
+  Outputs specifications found in a 3GPP specification's referenes section.
 EOF
 }
 

@@ -1,9 +1,9 @@
 #! /usr/bin/env bash
 
-. ${BASH_SOURCE%/*}/scripts/common.sh
-. ${BASH_SOURCE%/*}/scripts/file-types/doc.sh
-. ${BASH_SOURCE%/*}/scripts/file-types/pdf.sh
-. ${BASH_SOURCE%/*}/scripts/file-types/unknown.sh
+. ${BASH_SOURCE%/*}/scripts/common
+. ${BASH_SOURCE%/*}/scripts/file-types/doc
+. ${BASH_SOURCE%/*}/scripts/file-types/pdf
+. ${BASH_SOURCE%/*}/scripts/file-types/unknown
 
 readonly PROGRAM_NAME="phrasecount.sh"
 readonly LOG=$(tmp)/${PROGRAM_NAME}.log
@@ -16,6 +16,7 @@ Usage: ${PROGRAM_NAME} [-d] [-h] <-f FILE> <-p "grep-like phrase">
   -f </path/to/file> - specification to parse
   -p "grep-like phrase" - phrase to count number of occurrences of; use quotes
                           if the phrase contains whitespaces
+  Outputs number of occurences of given phrase in given specification document.
 EOF
 }
 
