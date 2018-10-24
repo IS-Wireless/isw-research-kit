@@ -5,7 +5,7 @@
 . ${BASH_SOURCE%/*}/scripts/file-types/pdf
 . ${BASH_SOURCE%/*}/scripts/file-types/unknown
 
-readonly PROGRAM_NAME="phrasecount.sh"
+readonly PROGRAM_NAME="phrasecount"
 readonly LOG=$(tmp)/${PROGRAM_NAME}.log
 
 function usage () {

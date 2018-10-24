@@ -5,7 +5,7 @@
 . ${BASH_SOURCE%/*}/scripts/file-types/pdf
 . ${BASH_SOURCE%/*}/scripts/file-types/unknown
 
-readonly PROGRAM_NAME="pagecount.sh"
+readonly PROGRAM_NAME="pagecount"
 readonly LOG=$(tmp)/${PROGRAM_NAME}.log
 
 function usage () {
