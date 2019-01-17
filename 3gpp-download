@@ -159,11 +159,18 @@ function download_specification () {
   debugger "LARGEST_SIZE" "${LARGEST_SIZE}"
   local readonly BEST_MATCH=$(find ${WORKSPACE}/spec/ -name "*.doc" -o -name "*.docx" -printf '%s %p\n' | grep "${LARGEST_SIZE}" | awk '{ print $2}' | grep -v "rm" | grep "${SPEC_MAJOR}\.\?${SPEC_MINOR}" | head -1)
   debugger "BEST_MATCH" "${BEST_MATCH}"
+
+  if log is_empty "${BEST_MATCH}"
+  then
+    log stack
+    return 1
+  fi
+
   local readonly EXTENSION=$(basename $BEST_MATCH | awk -F . '{ print $NF }')
   debugger "EXTENSION" "${EXTENSION}"
 
-  log mv ${BEST_MATCH} "${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.${EXTENSION}"
-  echo "saved requested specification to ${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.${EXTENSION}"
+  log mv ${BEST_MATCH} "${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.${EXTENSION:-bin}"
+  echo "saved requested specification to ${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.${EXTENSION:-bin}"
 }
 
 function main () {
