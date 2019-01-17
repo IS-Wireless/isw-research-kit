@@ -149,19 +149,21 @@ function download_specification () {
     return 1
   fi
 
-  # now get the largest doc file - the one most likely to be our spec
+  # now get the largest doc{,x} file - the one most likely to be our spec
   # if there are more than one files with the same largest size - get all of them
   # steps:
   # 1. find the size of the largest doc file
   # 2. list all files with that size
   # 3. from that list choose only those that have spec in name and no "rm"
-  local readonly LARGEST_SIZE=$(find ${WORKSPACE}/spec/ -name "*.doc" -printf '%s\n' | sort -nr | head -1)
+  local readonly LARGEST_SIZE=$(find ${WORKSPACE}/spec/ -name "*.doc" -o -name "*.docx" -printf '%s\n' | sort -nr | head -1)
   debugger "LARGEST_SIZE" "${LARGEST_SIZE}"
-  local readonly BEST_MATCH=$(find ${WORKSPACE}/spec/ -name "*.doc" -printf '%s %p\n' | grep "${LARGEST_SIZE}" | awk '{ print $2}' | grep -v "rm" | grep "${SPEC_MAJOR}\.\?${SPEC_MINOR}" | head -1)
+  local readonly BEST_MATCH=$(find ${WORKSPACE}/spec/ -name "*.doc" -o -name "*.docx" -printf '%s %p\n' | grep "${LARGEST_SIZE}" | awk '{ print $2}' | grep -v "rm" | grep "${SPEC_MAJOR}\.\?${SPEC_MINOR}" | head -1)
   debugger "BEST_MATCH" "${BEST_MATCH}"
+  local readonly EXTENSION=$(basename $BEST_MATCH | awk -F . '{ print $NF }')
+  debugger "EXTENSION" "${EXTENSION}"
 
-  log mv ${BEST_MATCH} "${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.doc"
-  echo "saved requested specification to ${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.doc"
+  log mv ${BEST_MATCH} "${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.${EXTENSION}"
+  echo "saved requested specification to ${OUTPUT}/${SPEC_MAJOR}${SPEC_MINOR}.${EXTENSION}"
 }
 
 function main () {
